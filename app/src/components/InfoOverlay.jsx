@@ -9,7 +9,7 @@ const InfoOverlay = () => {
     <>
       {/* Desktop - Full button with text */}
       <Button
-        variant="subtle"
+        variant="light"
         color="red"
         size="sm"
         leftSection={<IconInfoCircle size={20} />}
