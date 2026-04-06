@@ -5,6 +5,9 @@ import { useForecastData } from '../hooks/useForecastData';
 import { ViewContext } from './ViewContextObject';
 import { APP_CONFIG } from '../config';
 
+// Metrocast state codes
+const METROCAST_STATE_CODES = new Set(['CO', 'GA', 'IN', 'ME', 'MD', 'MA', 'MN', 'SC', 'TX', 'UT', 'VA', 'NC', 'OR']);
+
 export const ViewProvider = ({ children }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -180,19 +183,19 @@ export const ViewProvider = ({ children }) => {
 
 
     const isMovingToMetrocast = newView === 'metrocast_forecasts';
-    
+
     if (isMovingToMetrocast) {
-      const needsCityDefault = selectedLocation === APP_CONFIG.defaultLocation || selectedLocation.length === 2;
-      
+      // Only reset to metrocast default if coming from a different dataset and location is the app default
+      const isComingFromDifferentDataset = oldDataset?.shortName !== newDataset?.shortName;
+      const needsCityDefault = isComingFromDifferentDataset && selectedLocation === APP_CONFIG.defaultLocation;
+
       if (needsCityDefault && newDataset?.defaultLocation) {
         setSelectedLocation(newDataset.defaultLocation);
         newSearchParams.delete('location');
       }
     } else {
-      if (selectedLocation !== APP_CONFIG.defaultLocation && selectedLocation.length > 2) {
-        setSelectedLocation(APP_CONFIG.defaultLocation);
-        newSearchParams.delete('location');
-      }
+      // When leaving metrocast: don't delete from URL, just let state sync handle it
+      // This way when user returns to metrocast, the location is still in URL
     }
 
     if (newView !== APP_CONFIG.defaultView || newSearchParams.toString().length > 0) {
@@ -238,6 +241,23 @@ export const ViewProvider = ({ children }) => {
       setViewTypeState(viewFromUrl);
     }
   }, [searchParams, urlManager, viewType]);
+
+  // Sync location from URL based on current view
+  useEffect(() => {
+    const urlLocation = urlManager.getLocation();
+    const dataset = urlManager.getDatasetFromView(viewType);
+
+    // If we're on a non-metrocast view and the URL has a metrocast state code, use the dataset's default
+    if (viewType !== 'metrocast_forecasts' && METROCAST_STATE_CODES.has(urlLocation)) {
+      const effectiveDefault = dataset?.defaultLocation || APP_CONFIG.defaultLocation;
+      if (selectedLocation !== effectiveDefault) {
+        setSelectedLocation(effectiveDefault);
+      }
+    } else if (selectedLocation !== urlLocation) {
+      // Otherwise sync from URL
+      setSelectedLocation(urlLocation);
+    }
+  }, [viewType, searchParams, urlManager]);
 
   useEffect(() => {
     if (!isForecastPage) {
