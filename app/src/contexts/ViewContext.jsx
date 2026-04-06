@@ -185,13 +185,25 @@ export const ViewProvider = ({ children }) => {
     const isMovingToMetrocast = newView === 'metrocast_forecasts';
 
     if (isMovingToMetrocast) {
-      // Only reset to metrocast default if coming from a different dataset and location is the app default
-      const isComingFromDifferentDataset = oldDataset?.shortName !== newDataset?.shortName;
-      const needsCityDefault = isComingFromDifferentDataset && selectedLocation === APP_CONFIG.defaultLocation;
+      // Check if current location is supported by metrocast
+      const isCurrentLocationSupportedByMetrocast = METROCAST_STATE_CODES.has(selectedLocation);
 
-      if (needsCityDefault && newDataset?.defaultLocation) {
-        setSelectedLocation(newDataset.defaultLocation);
-        newSearchParams.delete('location');
+      if (!isCurrentLocationSupportedByMetrocast) {
+        // Current location is not supported by metrocast, reset to metrocast default
+        if (newDataset?.defaultLocation) {
+          setSelectedLocation(newDataset.defaultLocation);
+          newSearchParams.delete('location');
+        }
+      } else {
+        // Keep current location if it's supported
+        // Only reset to metrocast default if coming from a different dataset and location is the app default
+        const isComingFromDifferentDataset = oldDataset?.shortName !== newDataset?.shortName;
+        const needsCityDefault = isComingFromDifferentDataset && selectedLocation === APP_CONFIG.defaultLocation;
+
+        if (needsCityDefault && newDataset?.defaultLocation) {
+          setSelectedLocation(newDataset.defaultLocation);
+          newSearchParams.delete('location');
+        }
       }
     } else {
       // When leaving metrocast: don't delete from URL, just let state sync handle it
@@ -212,7 +224,7 @@ export const ViewProvider = ({ children }) => {
       setSelectedModels([]);
       setActiveDate(null);
       setSelectedTarget(null);
-      
+
       if (oldDataset) {
         newSearchParams.delete(`${oldDataset.prefix}_models`);
         newSearchParams.delete(`${oldDataset.prefix}_dates`);
@@ -247,16 +259,43 @@ export const ViewProvider = ({ children }) => {
     const urlLocation = urlManager.getLocation();
     const dataset = urlManager.getDatasetFromView(viewType);
 
-    // If we're on a non-metrocast view and the URL has a metrocast state code, use the dataset's default
-    if (viewType !== 'metrocast_forecasts' && METROCAST_STATE_CODES.has(urlLocation)) {
-      const effectiveDefault = dataset?.defaultLocation || APP_CONFIG.defaultLocation;
-      if (selectedLocation !== effectiveDefault) {
-        setSelectedLocation(effectiveDefault);
+    const syncLocation = async () => {
+      if (viewType !== 'metrocast_forecasts') {
+        // Check if it's a state code
+        if (METROCAST_STATE_CODES.has(urlLocation)) {
+          const effectiveDefault = dataset?.defaultLocation || APP_CONFIG.defaultLocation;
+          if (selectedLocation !== effectiveDefault) {
+            setSelectedLocation(effectiveDefault);
+          }
+        } else if (urlLocation.length > 2) {
+          // Might be a city abbreviation - try to extract state code
+          try {
+            const metroMetadata = await fetch('/processed_data/flumetrocast/metadata.json').then(r => r.json());
+            const city = metroMetadata.locations?.find(l => l.abbreviation === urlLocation);
+            if (city && city.location_name?.includes(',')) {
+              const stateCode = city.location_name.split(',')[1].trim().toUpperCase();
+              if (selectedLocation !== stateCode) {
+                setSelectedLocation(stateCode);
+              }
+            } else if (selectedLocation !== urlLocation) {
+              setSelectedLocation(urlLocation);
+            }
+          } catch (e) {
+            console.warn('Could not fetch metrocast metadata:', e);
+            if (selectedLocation !== urlLocation) {
+              setSelectedLocation(urlLocation);
+            }
+          }
+        } else if (selectedLocation !== urlLocation) {
+          setSelectedLocation(urlLocation);
+        }
+      } else if (selectedLocation !== urlLocation) {
+        // For metrocast view, sync from URL directly
+        setSelectedLocation(urlLocation);
       }
-    } else if (selectedLocation !== urlLocation) {
-      // Otherwise sync from URL
-      setSelectedLocation(urlLocation);
-    }
+    };
+
+    syncLocation();
   }, [viewType, searchParams, urlManager]);
 
   useEffect(() => {

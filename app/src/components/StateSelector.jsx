@@ -108,7 +108,7 @@ const StateSelector = () => {
         const stateCode = isMetroState ? METRO_STATE_MAP[state.location_name] : state.abbreviation;
         return stateCode === selectedLocation;
       });
-      setHighlightedIndex(index >= 0 ? index : 0);
+      setHighlightedIndex(index >= 0 ? index : -1);
     }
   }, [states, selectedLocation, viewType]);
 
@@ -131,7 +131,7 @@ const StateSelector = () => {
           const stateCode = isMetroState ? METRO_STATE_MAP[state.location_name] : state.abbreviation;
           return stateCode === selectedLocation;
         });
-        setHighlightedIndex(index >= 0 ? index : 0);
+        setHighlightedIndex(index >= 0 ? index : -1);
     }
   };
 
@@ -142,13 +142,16 @@ const StateSelector = () => {
 
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      newIndex = (highlightedIndex + 1) % filteredStates.length;
+      newIndex = highlightedIndex < 0 ? 0 : (highlightedIndex + 1) % filteredStates.length;
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      newIndex = (highlightedIndex - 1 + filteredStates.length) % filteredStates.length;
+      newIndex = highlightedIndex < 0 ? filteredStates.length - 1 : (highlightedIndex - 1 + filteredStates.length) % filteredStates.length;
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      const selectedState = filteredStates[highlightedIndex];
+
+      // If nothing is highlighted, start from first
+      const indexToUse = highlightedIndex < 0 ? 0 : highlightedIndex;
+      const selectedState = filteredStates[indexToUse];
 
       if (selectedState) {
         // For metrocast states, convert to 2-letter code
@@ -156,10 +159,11 @@ const StateSelector = () => {
         const locationCode = isMetroState ? METRO_STATE_MAP[selectedState.location_name] : selectedState.abbreviation;
         handleLocationSelect(locationCode);
         setSearchTerm('');
-        setHighlightedIndex(states.findIndex(s => {
+        const newHighlightedIndex = states.findIndex(s => {
           const isMetro = viewType === 'metrocast_forecasts' && !s.location_name.includes(',');
           return (isMetro ? METRO_STATE_MAP[s.location_name] : s.abbreviation) === locationCode;
-        }));
+        });
+        setHighlightedIndex(newHighlightedIndex >= 0 ? newHighlightedIndex : -1);
         event.currentTarget.blur();
       }
       return;
