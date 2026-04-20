@@ -188,9 +188,11 @@ const StateSelector = () => {
 
       <Divider />
 
-      <Stack>
-        <TargetSelector />
-      </Stack>
+      {viewType !== 'frontpage' && (
+        <Stack>
+          <TargetSelector />
+        </Stack>
+      )}
 
       {viewType !== 'frontpage' && (
         <Accordion
