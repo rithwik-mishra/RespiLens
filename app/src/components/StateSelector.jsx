@@ -162,7 +162,7 @@ const StateSelector = () => {
 
   return (
     <Stack gap="md" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Stack gap="xs" style={{ flexShrink: 0 }}>
+      <Stack gap="xs" style={{ flexShrink: 0, width: '100%' }}>
         <ViewSelector />
       </Stack>
 
