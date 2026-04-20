@@ -272,7 +272,7 @@ const MetroCastView = ({ data, metadata, selectedDates, selectedModels, models, 
     fetchChildren();
   }, [stateCode, metadata, selectedTarget]);
 
-  if (!selectedTarget) return <Center h={300}><Text>Please select a target.</Text></Center>;
+  if (!selectedTarget && data) return <Center h={300}><Text>Please select a target.</Text></Center>;
 
   if (!data) {
     const isNoStateSelected = selectedLocation === 'US';

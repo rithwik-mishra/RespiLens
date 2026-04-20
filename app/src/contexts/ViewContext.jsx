@@ -192,7 +192,7 @@ export const ViewProvider = ({ children }) => {
         // Current location is not supported by metrocast, reset to metrocast default
         if (newDataset?.defaultLocation) {
           setSelectedLocation(newDataset.defaultLocation);
-          newSearchParams.delete('location');
+          newSearchParams.set('location', newDataset.defaultLocation);
         }
       } else {
         // Keep current location if it's supported
