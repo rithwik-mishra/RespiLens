@@ -1,8 +1,8 @@
 export const DATASETS = {
   flu: {
     shortName: 'flu',
-    fullName: 'Flu Forecast',
-    titleName: 'Flusight Forecasts',
+    fullName: 'Flu',
+    titleName: 'FluSight Forecasts',
     views: [
       { key: 'detailed', label: 'Detailed Forecasts View', value: 'fludetailed' },
       { key: 'forecasts', label: 'Forecasts', value: 'flu_forecasts' },
@@ -18,7 +18,7 @@ export const DATASETS = {
   },
   rsv: {
     shortName: 'rsv',
-    fullName: 'RSV Forecast',
+    fullName: 'RSV',
     titleName: 'RSV Forecast Hub',
     views: [
       { key: 'forecasts', label: 'Forecasts', value: 'rsv_forecasts' }
@@ -33,7 +33,7 @@ export const DATASETS = {
   },
   covid: {
     shortName: 'covid',
-    fullName: 'COVID-19 Forecasts',
+    fullName: 'COVID-19',
     titleName: 'COVID-19 Forecast Hub',
     views: [
       { key: 'forecasts', label: 'Forecasts', value: 'covid_forecasts' }

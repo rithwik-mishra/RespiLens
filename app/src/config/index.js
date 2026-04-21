@@ -20,6 +20,9 @@ import { FORECASTLE_CONFIG } from './forecastle';
 // Tournament settings
 import { TOURNAMENT_CONFIG, getChallengeById, getChallengeByNumber, areAllChallengesCompleted } from './tournament';
 
+// View selector groups
+import { VIEW_SELECTOR_GROUPS } from './view_selector_groups'
+
 // Visualization and chart settings
 import { CHART_CONFIG } from './visualization';
 
@@ -29,6 +32,7 @@ export { APP_CONFIG };
 export { FORECASTLE_CONFIG };
 export { TOURNAMENT_CONFIG, getChallengeById, getChallengeByNumber, areAllChallengesCompleted };
 export { CHART_CONFIG };
+export { VIEW_SELECTOR_GROUPS };
 
 /**
  * Convenience function to get the entire configuration object
