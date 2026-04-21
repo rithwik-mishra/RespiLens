@@ -8,7 +8,7 @@ export const VIEW_SELECTOR_GROUPS = [
     datasets: ['metrocast']
   },
   {
-    title: 'Past Data',
+    title: 'Surveillance Data',
     datasets: ['nhsn']
   }
 ];
