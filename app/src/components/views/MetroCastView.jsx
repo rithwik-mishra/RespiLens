@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useMantineColorScheme, Stack, Text, Center, SimpleGrid, Paper, Loader, Box, UnstyledButton } from '@mantine/core';
+import { useMantineColorScheme, Stack, Text, Center, SimpleGrid, Paper, Loader, Box, UnstyledButton, Alert } from '@mantine/core';
 import Plot from 'react-plotly.js';
 import ModelSelector from '../ModelSelector';
 import TitleRow from '../TitleRow';
@@ -225,7 +225,7 @@ const MetroPlotCard = ({
 
 const MetroCastView = ({ data, metadata, selectedDates, selectedModels, models, setSelectedModels, windowSize, getDefaultRange, selectedTarget }) => {
   const { colorScheme } = useMantineColorScheme();
-  const { handleLocationSelect, chartScale, intervalVisibility, showLegend, viewType } = useView();
+  const { handleLocationSelect, chartScale, intervalVisibility, showLegend, viewType, selectedLocation } = useView();
   const [childData, setChildData] = useState({});
   const [loadingChildren, setLoadingChildren] = useState(false);
   const [xAxisRange, setXAxisRange] = useState(null);
@@ -272,7 +272,26 @@ const MetroCastView = ({ data, metadata, selectedDates, selectedModels, models, 
     fetchChildren();
   }, [stateCode, metadata, selectedTarget]);
 
-  if (!selectedTarget) return <Center h={300}><Text>Please select a target.</Text></Center>;
+  if (!selectedTarget && data) return <Center h={300}><Text>Please select a target.</Text></Center>;
+
+  if (!data) {
+    const isNoStateSelected = selectedLocation === 'US';
+
+    return (
+      <Stack gap="xl">
+        <TitleRow
+          title={`— Flu MetroCast Forecasts`}
+          timestamp={metadata?.last_updated}
+        />
+        <Alert color={isNoStateSelected ? "gray" : "blue"} title={isNoStateSelected ? "Select a State" : "No Data Available"}>
+          {isNoStateSelected
+            ? "Please select a state from the location list to view MetroCast forecasts."
+            : "Forecast data is not available for the selected location. Please select a different state from the location list."
+          }
+        </Alert>
+      </Stack>
+    );
+  }
 
   return (
     <Stack gap="xl">

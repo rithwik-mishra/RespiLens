@@ -68,12 +68,11 @@ export const DATASETS = {
       { key: 'forecasts', label: 'Forecasts', value: 'metrocast_forecasts' }
     ],
     defaultView: 'metrocast_forecasts',
-    defaultModel: 'epiENGAGE-ensemble_mean', 
-    defaultLocation: 'colorado',
+    defaultModel: 'epiENGAGE-ensemble_mean',
     hasDateSelector: true,
     hasModelSelector: true,
     prefix: 'metrocast',
-    dataPath: 'flumetrocast', 
+    dataPath: 'flumetrocast',
     targetLineDayOfWeek: 3
 },
 };

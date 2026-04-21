@@ -5,6 +5,9 @@ import { useForecastData } from '../hooks/useForecastData';
 import { ViewContext } from './ViewContextObject';
 import { APP_CONFIG } from '../config';
 
+// Metrocast state codes
+const METROCAST_STATE_CODES = new Set(['CO', 'GA', 'IN', 'ME', 'MD', 'MA', 'MN', 'SC', 'TX', 'UT', 'VA', 'NC', 'OR']);
+
 export const ViewProvider = ({ children }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -180,19 +183,31 @@ export const ViewProvider = ({ children }) => {
 
 
     const isMovingToMetrocast = newView === 'metrocast_forecasts';
-    
+
     if (isMovingToMetrocast) {
-      const needsCityDefault = selectedLocation === APP_CONFIG.defaultLocation || selectedLocation.length === 2;
-      
-      if (needsCityDefault && newDataset?.defaultLocation) {
-        setSelectedLocation(newDataset.defaultLocation);
-        newSearchParams.delete('location');
+      // Check if current location is supported by metrocast
+      const isCurrentLocationSupportedByMetrocast = METROCAST_STATE_CODES.has(selectedLocation);
+
+      if (!isCurrentLocationSupportedByMetrocast) {
+        // Current location is not supported by metrocast, reset to metrocast default
+        if (newDataset?.defaultLocation) {
+          setSelectedLocation(newDataset.defaultLocation);
+          newSearchParams.set('location', newDataset.defaultLocation);
+        }
+      } else {
+        // Keep current location if it's supported
+        // Only reset to metrocast default if coming from a different dataset and location is the app default
+        const isComingFromDifferentDataset = oldDataset?.shortName !== newDataset?.shortName;
+        const needsCityDefault = isComingFromDifferentDataset && selectedLocation === APP_CONFIG.defaultLocation;
+
+        if (needsCityDefault && newDataset?.defaultLocation) {
+          setSelectedLocation(newDataset.defaultLocation);
+          newSearchParams.delete('location');
+        }
       }
     } else {
-      if (selectedLocation !== APP_CONFIG.defaultLocation && selectedLocation.length > 2) {
-        setSelectedLocation(APP_CONFIG.defaultLocation);
-        newSearchParams.delete('location');
-      }
+      // When leaving metrocast: don't delete from URL, just let state sync handle it
+      // This way when user returns to metrocast, the location is still in URL
     }
 
     if (newView !== APP_CONFIG.defaultView || newSearchParams.toString().length > 0) {
@@ -209,7 +224,7 @@ export const ViewProvider = ({ children }) => {
       setSelectedModels([]);
       setActiveDate(null);
       setSelectedTarget(null);
-      
+
       if (oldDataset) {
         newSearchParams.delete(`${oldDataset.prefix}_models`);
         newSearchParams.delete(`${oldDataset.prefix}_dates`);
@@ -238,6 +253,50 @@ export const ViewProvider = ({ children }) => {
       setViewTypeState(viewFromUrl);
     }
   }, [searchParams, urlManager, viewType]);
+
+  // Sync location from URL based on current view
+  useEffect(() => {
+    const urlLocation = urlManager.getLocation();
+    const dataset = urlManager.getDatasetFromView(viewType);
+
+    const syncLocation = async () => {
+      if (viewType !== 'metrocast_forecasts') {
+        // Check if it's a state code
+        if (METROCAST_STATE_CODES.has(urlLocation)) {
+          const effectiveDefault = dataset?.defaultLocation || APP_CONFIG.defaultLocation;
+          if (selectedLocation !== effectiveDefault) {
+            setSelectedLocation(effectiveDefault);
+          }
+        } else if (urlLocation.length > 2) {
+          // Might be a city abbreviation - try to extract state code
+          try {
+            const metroMetadata = await fetch('/processed_data/flumetrocast/metadata.json').then(r => r.json());
+            const city = metroMetadata.locations?.find(l => l.abbreviation === urlLocation);
+            if (city && city.location_name?.includes(',')) {
+              const stateCode = city.location_name.split(',')[1].trim().toUpperCase();
+              if (selectedLocation !== stateCode) {
+                setSelectedLocation(stateCode);
+              }
+            } else if (selectedLocation !== urlLocation) {
+              setSelectedLocation(urlLocation);
+            }
+          } catch (e) {
+            console.warn('Could not fetch metrocast metadata:', e);
+            if (selectedLocation !== urlLocation) {
+              setSelectedLocation(urlLocation);
+            }
+          }
+        } else if (selectedLocation !== urlLocation) {
+          setSelectedLocation(urlLocation);
+        }
+      } else if (selectedLocation !== urlLocation) {
+        // For metrocast view, sync from URL directly
+        setSelectedLocation(urlLocation);
+      }
+    };
+
+    syncLocation();
+  }, [viewType, searchParams, urlManager]);
 
   useEffect(() => {
     if (!isForecastPage) {

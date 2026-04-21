@@ -102,10 +102,15 @@ const StateSelector = () => {
 
   useEffect(() => {
     if (states.length > 0) {
-      const index = states.findIndex(state => state.abbreviation === selectedLocation);
-      setHighlightedIndex(index >= 0 ? index : 0);
+      const index = states.findIndex(state => {
+        // For metrocast, convert state name to code for comparison
+        const isMetroState = viewType === 'metrocast_forecasts' && !state.location_name.includes(',');
+        const stateCode = isMetroState ? METRO_STATE_MAP[state.location_name] : state.abbreviation;
+        return stateCode === selectedLocation;
+      });
+      setHighlightedIndex(index >= 0 ? index : -1);
     }
-  }, [states, selectedLocation]);
+  }, [states, selectedLocation, viewType]);
 
 
   const filteredStates = states.filter(state =>
@@ -116,12 +121,17 @@ const StateSelector = () => {
   const handleSearchChange = (e) => {
     const newSearchTerm = e.currentTarget.value;
     setSearchTerm(newSearchTerm);
-    
+
     if (newSearchTerm.length > 0 && filteredStates.length > 0) {
-        setHighlightedIndex(0); 
+        setHighlightedIndex(0);
     } else if (newSearchTerm.length === 0) {
-        const index = states.findIndex(state => state.abbreviation === selectedLocation);
-        setHighlightedIndex(index >= 0 ? index : 0);
+        const index = states.findIndex(state => {
+          // For metrocast, convert state name to code for comparison
+          const isMetroState = viewType === 'metrocast_forecasts' && !state.location_name.includes(',');
+          const stateCode = isMetroState ? METRO_STATE_MAP[state.location_name] : state.abbreviation;
+          return stateCode === selectedLocation;
+        });
+        setHighlightedIndex(index >= 0 ? index : -1);
     }
   };
 
@@ -132,23 +142,33 @@ const StateSelector = () => {
 
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      newIndex = (highlightedIndex + 1) % filteredStates.length;
+      newIndex = highlightedIndex < 0 ? 0 : (highlightedIndex + 1) % filteredStates.length;
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      newIndex = (highlightedIndex - 1 + filteredStates.length) % filteredStates.length;
+      newIndex = highlightedIndex < 0 ? filteredStates.length - 1 : (highlightedIndex - 1 + filteredStates.length) % filteredStates.length;
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      const selectedState = filteredStates[highlightedIndex];
-      
+
+      // If nothing is highlighted, start from first
+      const indexToUse = highlightedIndex < 0 ? 0 : highlightedIndex;
+      const selectedState = filteredStates[indexToUse];
+
       if (selectedState) {
-        handleLocationSelect(selectedState.abbreviation);
-        setSearchTerm(''); 
-        setHighlightedIndex(states.findIndex(s => s.abbreviation === selectedState.abbreviation));
+        // For metrocast states, convert to 2-letter code
+        const isMetroState = viewType === 'metrocast_forecasts' && !selectedState.location_name.includes(',');
+        const locationCode = isMetroState ? METRO_STATE_MAP[selectedState.location_name] : selectedState.abbreviation;
+        handleLocationSelect(locationCode);
+        setSearchTerm('');
+        const newHighlightedIndex = states.findIndex(s => {
+          const isMetro = viewType === 'metrocast_forecasts' && !s.location_name.includes(',');
+          return (isMetro ? METRO_STATE_MAP[s.location_name] : s.abbreviation) === locationCode;
+        });
+        setHighlightedIndex(newHighlightedIndex >= 0 ? newHighlightedIndex : -1);
         event.currentTarget.blur();
       }
-      return; // Exit early if Enter is pressed
+      return;
     }
-    
+
     setHighlightedIndex(newIndex);
   };
 
@@ -168,9 +188,11 @@ const StateSelector = () => {
 
       <Divider />
 
-      <Stack>
-        <TargetSelector />
-      </Stack>
+      {viewType !== 'frontpage' && (
+        <Stack>
+          <TargetSelector />
+        </Stack>
+      )}
 
       {viewType !== 'frontpage' && (
         <Accordion
@@ -215,9 +237,12 @@ const StateSelector = () => {
         <ScrollArea style={{ flex: 1, minHeight: 0 }} type="auto">
           <Stack gap="xs">
             {filteredStates.map((state, index) => {
-              const isSelected = selectedLocation === state.abbreviation;
-              const isKeyboardHighlighted = (searchTerm.length > 0 || index === highlightedIndex) && 
-                                              index === highlightedIndex && 
+              // For metrocast, convert state name to code for comparison
+              const isMetroState = viewType === 'metrocast_forecasts' && !state.location_name.includes(',');
+              const stateCode = isMetroState ? METRO_STATE_MAP[state.location_name] : state.abbreviation;
+              const isSelected = selectedLocation === stateCode;
+              const isKeyboardHighlighted = (searchTerm.length > 0 || index === highlightedIndex) &&
+                                              index === highlightedIndex &&
                                               !isSelected;
 
               // Only apply nested styling in Metrocast view
@@ -240,9 +265,15 @@ const StateSelector = () => {
                   variant={variant}
                   color={color}
                   onClick={() => {
-                    handleLocationSelect(state.abbreviation);
+                    // For metrocast states, convert to 2-letter code
+                    const isMetroState = viewType === 'metrocast_forecasts' && !state.location_name.includes(',');
+                    const locationCode = isMetroState ? METRO_STATE_MAP[state.location_name] : state.abbreviation;
+                    handleLocationSelect(locationCode);
                     setSearchTerm('');
-                    setHighlightedIndex(states.findIndex(s => s.abbreviation === state.abbreviation));
+                    setHighlightedIndex(states.findIndex(s => {
+                      const isMetro = viewType === 'metrocast_forecasts' && !s.location_name.includes(',');
+                      return (isMetro ? METRO_STATE_MAP[s.location_name] : s.abbreviation) === locationCode;
+                    }));
                   }}
                   justify="start"
                   size="sm"

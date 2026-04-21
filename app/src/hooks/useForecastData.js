@@ -1,6 +1,23 @@
 import { useState, useEffect } from 'react';
 import { getDataPath } from '../utils/paths';
 
+// Map 2-letter state codes to lowercase state names for metrocast files
+const METROCAST_CODE_TO_NAME = {
+  'CO': 'colorado',
+  'GA': 'georgia',
+  'IN': 'indiana',
+  'ME': 'maine',
+  'MD': 'maryland',
+  'MA': 'massachusetts',
+  'MN': 'minnesota',
+  'SC': 'south carolina',
+  'TX': 'texas',
+  'UT': 'utah',
+  'VA': 'virginia',
+  'NC': 'north carolina',
+  'OR': 'oregon'
+};
+
 export const useForecastData = (location, viewType) => {
   const [data, setData] = useState(null);
   const [metadata, setMetadata] = useState(null);
@@ -17,11 +34,11 @@ export const useForecastData = (location, viewType) => {
 
   useEffect(() => {
     const isMetrocastView = viewType === 'metrocast_forecasts';
-      const isDefaultUS = location === 'US';
-      if ((isMetrocastView && isDefaultUS) || (!isMetrocastView && location === 'colorado')) {
-        setLoading(false);
-        return;
-      }
+    const isDefaultUS = location === 'US';
+    if (isMetrocastView && isDefaultUS) {
+      setLoading(false);
+      return;
+    }
     if (!location || !viewType || viewType === 'frontpage') {
       setLoading(false);
       setError(null);
@@ -55,19 +72,39 @@ export const useForecastData = (location, viewType) => {
         const datasetConfig = datasetMap[viewType];
         if (!datasetConfig) throw new Error(`Unknown view type: ${viewType}`);
 
-        const dataPath = getDataPath(`${datasetConfig.directory}/${location}_${datasetConfig.suffix}.json`);
+        // Convert 2-letter state code to lowercase name for metrocast files
+        let locationForPath = location;
+        if (isMetrocastView && METROCAST_CODE_TO_NAME[location]) {
+          locationForPath = METROCAST_CODE_TO_NAME[location];
+        }
+
+        const dataPath = getDataPath(`${datasetConfig.directory}/${locationForPath}_${datasetConfig.suffix}.json`);
         const metadataPath = getDataPath(`${datasetConfig.directory}/metadata.json`);
-        
+
         const [dataResponse, metadataResponse] = await Promise.all([
           fetch(dataPath),
           fetch(metadataPath)
         ]);
 
-        if (!dataResponse.ok) throw new Error(`Failed to fetch data: ${dataResponse.status}`);
+        if (!dataResponse.ok) {
+          throw new Error(`Failed to fetch data: ${dataResponse.status}`);
+        }
         if (!metadataResponse.ok) throw new Error(`Failed to fetch metadata: ${metadataResponse.status}`);
 
-        const jsonData = await dataResponse.json();
-        const jsonMetadata = await metadataResponse.json();
+        let jsonData, jsonMetadata;
+
+        try {
+          jsonData = await dataResponse.json();
+          jsonMetadata = await metadataResponse.json();
+        } catch (parseError) {
+          // For metrocast, gracefully handle incorrect/missing data
+          if (isMetrocastView) {
+            console.warn(`Invalid or missing forecast data for metrocast location: ${location}`);
+            setLoading(false);
+            return;
+          }
+          throw parseError;
+        }
 
         setData(jsonData);
         setMetadata(jsonMetadata);
