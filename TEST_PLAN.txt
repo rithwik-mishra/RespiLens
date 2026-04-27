@@ -1,0 +1,705 @@
+IDEAL TEST PLAN (Unlimited Time/Resources)
+
+
+A. UNIT TESTING (Automated - Vitest with React Testing Library)
+
+1.1 Utility Function Tests (src/utils/)
+   Files to test:
+   - urlManager.js: URL parameter parsing, encoding, default values
+   - mapUtils.js: State/location mapping functions
+   - datasetUtils.js: Dataset configuration retrieval
+   - forecastleValidation.js: Forecast input validation
+   - forecastleScoring.js: Scoring calculation accuracy
+
+   Test Cases:
+   - Valid inputs (state codes, city abbreviations, date formats)
+   - Edge cases (empty strings, null values, malformed data)
+   - Boundary conditions (min/max values for scales)
+   - Data transformations (city abbr → state code mapping)
+   - URL parameter round-trip (encode/decode)
+
+   Success Criteria: 100% code coverage for utility functions
+
+1.2 Hook Tests (src/hooks/)
+   Files to test:
+   - useForecastData.js: Data fetching and caching
+   - useView.js: Context consumer validation
+   - useQuantileForecastTraces.js: Trace data generation
+   - useOverviewPlot.js: Plot data aggregation
+   - useAdaptiveYRange.js: Y-axis range calculations
+
+   Test Cases:
+   - Data fetch success/failure scenarios
+   - Missing or malformed JSON responses
+   - File not found (404) handling
+   - Empty datasets (no forecasts)
+   - Different state/location combinations
+   - Chart scale transformations (linear/log/sqrt)
+   - Quantile presence/absence in data
+
+   Success Criteria: All hooks handle error states gracefully
+
+1.3 Context Tests (src/contexts/ViewContext.jsx)
+   Test Cases:
+   - Location selection persistence
+   - View type changes with state preservation
+   - Model/date/target selection independent per view
+   - Location validation when switching views
+   - Chart scale/interval/legend settings persist across views
+   - City abbreviation → state code mapping on view switch
+   - Invalid location handling (state without MetroCast)
+
+   Success Criteria: State properly persists and validates
+
+B. COMPONENT TESTS (React Testing Library)
+
+2.1 StateSelector Component Tests
+   Test Cases:
+   - List renders all available states/cities
+   - Search filters work (case-insensitive)
+   - Location selection updates context
+   - Keyboard navigation (arrow keys, enter)
+   - No default highlighting when nothing selected (Bug #3 fix)
+   - MetroCast view shows city hierarchy
+   - Non-MetroCast view shows flat list
+   - Mouse and keyboard interaction equity
+
+   Success Criteria: Component handles all user input types
+
+2.2 ViewSwitchboard Component Tests
+   Test Cases:
+   - Correct view component renders per viewType
+   - Data props passed correctly to view components
+   - Error boundaries catch component failures
+   - Loading state displays appropriately
+   - View switching resets/persists state correctly
+
+   Success Criteria: All 5 views render correctly
+
+2.3 Attribution/Citation Component Tests
+   Test Cases:
+   - Attribution info displays for selected datasets
+   - Multiple attributions visible simultaneously
+   - Links to data sources are active
+   - Attribution not obscured by selection menu
+   - Citation data structure matches requirements
+
+   Success Criteria: Attribution always visible and accurate
+
+2.4 Chart Control Components Tests
+   Test Cases:
+   - Y-scale selection (linear/log/sqrt) applies correctly
+   - Interval visibility (median/50%/95%) toggles work
+   - Legend display toggle persists
+   - Settings apply across multiple charts
+   - Scale transformations produce correct values
+
+   Success Criteria: All controls affect visualization properly
+
+C. INTEGRATION TESTING
+
+3.1 View Switching Workflows
+   Scenarios:
+   a) Flu MetroCast (city selected) → FluView
+      Expected: City abbr maps to state code (Bug #1 fix)
+      Verify: FluView loads state-level data correctly
+      Verify: If city abbr invalid, shows error then resets (Bug #2 fix)
+
+   b) COVID-19 (state NY) → Flu MetroCast
+      Expected: NY → Default MetroCast state if not supported
+      Verify: No errors displayed
+      Data: MetroCast loads correct default
+
+   c) FluView (CO selected) → MetroCast
+      Expected: MetroCast loads Colorado data
+      Verify: City list available for Colorado
+      Verify: UI not obscured by selection panel
+
+   d) RSV (VA selected) → MetroCast
+      Expected: MetroCast loads Virginia data
+      Verify: VA supported in MetroCast
+
+   e) Return to Previous View
+      Expected: Previous selections restored
+      Verify: URL contains view history
+      Verify: State persists without re-fetching
+
+3.2 Data Integrity Testing
+   Scenarios:
+   - Load all 13 MetroCast states
+     Expected: All state files exist and parse
+     Verify: No console errors
+     Verify: Cities have correct state associations
+
+   - Load all FluSight states
+     Expected: All metadata.json present
+     Verify: Available targets consistent
+     Verify: Model lists complete
+
+   - Test data consistency across views
+     Expected: Ground truth data identical across views
+     Verify: Rankings/comparisons remain consistent
+
+   - Empty forecast scenarios
+     Expected: "No data available" message instead of crash
+     Verify: Graceful error handling
+
+3.3 State Persistence Testing
+   Scenarios:
+   - Session storage of URL parameters
+     Expected: ?view=flu_forecasts&location=CO&date=2026-03-15
+     Verify: Page reload restores all selections
+     Verify: Browser back button navigates correctly
+
+   - Chart settings persistence
+     Expected: User-set scale/intervals default to user choice
+     Verify: Persists across view switches
+     Verify: Stored in URL or localStorage appropriately
+
+   - Model/date selection persistence
+     Expected: Selected models and dates stay selected
+     Verify: When switching views (if applicable)
+     Verify: When navigating back
+
+   - Invalid state recovery
+     Expected: Selecting invalid location → automatic reset
+     Verify: No persistent error states
+     Verify: UI recovers gracefully
+
+3.4 Attribution/Citation Workflows
+   Scenarios:
+   - Display multiple data sources simultaneously
+     Expected: Attribution visible for Flu + MetroCast
+     Verify: Not cluttered, secondary to selection
+     Verify: All sources visible without scrolling
+
+   - Citation export functionality (if implemented)
+     Expected: Generates formatted bibliography
+     Verify: Format matches academic standards
+     Verify: Includes all selected data sources
+
+   - Link validation
+     Expected: All attribution links functional
+     Verify: Links point to official sources
+     Verify: Links open in new tabs appropriately
+
+D. SYSTEM/END-TO-END TESTING (Manual - Researcher Workflow)
+
+4.1 Primary Use Case: Explore Flu Forecasts
+   Actor: Academic Disease Modeling Researcher
+   Environment: Chrome 125+, Firefox 130+, Safari 17+
+   Steps:
+   1. Load RespiLens home page
+   2. Click Flu Forecasts
+   3. Verify all states available in StateSelector
+   4. Select Colorado
+   5. Verify state-level forecasts load
+   6. Click on Denver city card
+   7. Verify city-level data displays
+   8. Switch to FluView (other forecasts view)
+   9. Verify Colorado data loads (not Denver)
+   10. Return to MetroCast
+   11. Verify Denver still selected
+   Expected Result: No errors, smooth navigation, correct data
+
+4.2 Comparative Analysis: Multiple Views
+   Actor: Public Health Official
+   Steps:
+   1. Load Flu forecasts for Texas
+   2. Record displayed projections
+   3. Switch to COVID-19 forecasts for Texas
+   4. Record attributed models for COVID
+   5. Switch to RSV forecasts for Texas
+   6. Verify TX available in all three
+   7. Compare attribution sources across views
+   Expected Result: Consistent data, accurate attributions
+
+4.3 State Change Workflow
+   Actor: Researcher
+   Steps:
+   1. Load MetroCast for Colorado
+   2. Select Denver
+   3. Select model and forecast date
+   4. Navigate to RSV forecasts
+   Expected Result: Automatically switches to Colorado-level
+                    (RSV doesn't have cities)
+
+4.4 Error Handling Workflow
+   Actor: Researcher (explores edge cases)
+   Steps:
+   1. Manually construct URL with invalid location
+   2. Load page with unsupported state for current view
+   3. Attempt to select unsupported data combination
+   Expected Result: Clear error messages, recovery options shown
+
+
+
+G. REGRESSION TESTING
+
+7.1 Automated Regression Suite
+   After each commit:
+   - All unit tests pass (100% pass rate)
+   - No console warnings/errors
+   - Critical user workflows pass (E2E smoke tests)
+   - Performance metrics stable
+   - Build succeeds without warnings
+
+================================================================================
+PART 2: ACTUAL TEST PLAN (What Will Be Tested)
+================================================================================
+
+This section defines the realistic, achievable testing given project constraints.
+
+A. TESTING FRAMEWORK SETUP
+
+To be implemented:
+- Install Vitest (Vite-native testing) + React Testing Library
+- Add to package.json:
+  ```
+  "test": "vitest",
+  "test:ui": "vitest --ui",
+  "test:coverage": "vitest --coverage"
+  ```
+- Create tests/ directory with same structure as src/
+
+Installation Commands:
+```bash
+npm install --save-dev vitest @vitest/ui @testing-library/react \
+  @testing-library/jest-dom @testing-library/user-event jsdom
+```
+
+B. UNIT TEST SUITE (Phase 1 Priority)
+
+Files: app/tests/unit/
+
+1.1 Critical Utilities (MUST TEST - affects multiple features)
+    Tests to create: tests/unit/utils/
+
+    - urlManager.test.js (20 tests)
+      ✓ parseLocation(): valid states, cities, defaults
+      ✓ parseView(): all 5 view types
+      ✓ URL round-trip consistency
+      ✓ Default values when parameters missing
+      Test Data: See "Test Data Sets" section below
+
+    - mapUtils.test.js (10 tests)
+      ✓ State name to code mapping (METRO_STATE_MAP)
+      ✓ City abbr to state code extraction
+      ✓ City vs state detection
+      ✓ Invalid location handling
+
+    - scaleUtils.test.js (8 tests)
+      ✓ Linear scale (identity)
+      ✓ Log scale transformation (handles zero, negative)
+      ✓ Sqrt scale transformation
+      ✓ Inverse transformations
+
+    Test Data Files: tests/data/
+    - mock-states.json: All US state/territory objects
+    - mock-cities.json: MetroCast city objects
+    - mock-forecasts.json: Sample forecast data structure
+
+    Run: npm run test tests/unit/utils/
+
+1.2 State Management (Hooks - MUST TEST)
+    Tests to create: tests/unit/contexts/
+
+    - ViewContext.test.js (15 tests)
+      ✓ Initial state values correct
+      ✓ Location changes propagate to URL
+      ✓ View type changes persist selection
+      ✓ Invalid location handling (city → state mapping)
+      ✓ Model/date/target selection per view
+      ✓ Chart settings persistence
+      ✓ Unsupported state → default when switching to MetroCast
+
+      Test Setup:
+      - Mock React Router
+      - Mock fetch() for metadata
+      - Reset URL after each test
+
+1.3 Forecast Data Validation (Hooks - MUST TEST)
+    Tests to create: tests/unit/hooks/
+
+    - useForecastData.test.js (12 tests)
+      ✓ Successfully fetches and parses JSON
+      ✓ Handles 404 (missing state file)
+      ✓ Handles malformed JSON
+      ✓ Returns correct metadata structure
+      ✓ Extracts targets and models
+      ✓ Different view types use correct paths
+      ✓ MetroCast maps state codes to file names
+
+      Mock Data Sources: tests/mocks/
+      - Create response.json files for each view type
+      - Mock failed requests (error responses)
+
+1.4 Plotly Trace Generation (SHOULD TEST)
+    Tests to create: tests/unit/hooks/
+
+    - useQuantileForecastTraces.test.js (8 tests)
+      ✓ Generates correct trace structure
+      ✓ Handles missing quantiles gracefully
+      ✓ Applies scale transformations
+      ✓ Formats values correctly (% suffix, decimals)
+
+    - useOverviewPlot.test.js (6 tests)
+      ✓ Aggregates data correctly
+      ✓ Calculates Y-range with padding
+      ✓ Handles empty data sets
+
+Target Coverage:
+    - Utils: 100%
+    - Contexts: 90%+
+    - Hooks: 80%+
+    - Overall: 75% (Phase 1)
+
+Run: npm run test:coverage
+
+C. COMPONENT INTEGRATION TESTS (Phase 2)
+
+Files: tests/integration/
+
+2.1 Location Selection Flow (MUST TEST)
+    Test: StateSelector-ViewContext integration
+
+    - File: tests/integration/StateSelector.test.jsx
+    - Scenarios:
+      ✓ User selects state → ViewContext updates
+      ✓ User types in search → filters work
+      ✓ User presses Enter → location selected
+      ✓ User presses Arrow keys → navigates list
+      ✓ No state highlighted by default (Bug #3)
+      ✓ City selection (MetroCast only)
+      ✓ City→State mapping when switching views
+
+    Test Setup:
+    - Render with ViewProvider wrapper
+    - Mock useForecastData to return test data
+    - User interactions via @testing-library/user-event
+
+2.2 View Switching (SHOULD TEST)
+    Test: ViewSwitchboard + individual views
+
+    - File: tests/integration/ViewSwitching.test.jsx
+    - Scenarios:
+      ✓ All 5 views render with correct data
+      ✓ MetroCast→FluView mapping (Bug #1)
+      ✓ Non-MetroCast state→MetroCast reset (Bug #2)
+      ✓ Return to MetroCast with previous city
+      ✓ Error boundaries catch failures
+      ✓ Loading state displays during fetch
+
+2.3 Chart Controls (SHOULD TEST)
+    Test: ForecastChartControls persistence
+
+    - File: tests/integration/ChartControls.test.jsx
+    - Scenarios:
+      ✓ Y-scale changes apply to chart
+      ✓ Interval checkboxes toggle correctly
+      ✓ Legend toggle persists across views
+      ✓ Settings stored in ViewContext
+
+D. MANUAL END-TO-END TESTS (Phase 1)
+
+Follow test scripts below. Use test data sets to verify each workflow.
+
+3.1 Researcher Workflow Test
+    File: TEST_SCENARIOS.txt (separate file with detailed steps)
+
+    Test Steps:
+    1. Load RespiLens in Chrome
+    2. Select Flu Forecasts
+    3. Select Colorado
+    4. Verify data loads without errors
+    5. Select Denver (MetroCast city)
+    6. Switch to FluView
+    7. Verify Colorado data (NOT Denver)
+    8. Return to MetroCast → Denver still selected
+    9. Try switching to RSV Forecasts
+    10. Check if Colorado available (expected: yes)
+
+    Expected: All steps succeed, no console errors
+    Browser: Chrome 125+
+    Test Duration: ~5 minutes
+
+    Test Data:
+    - Use live /processed_data/ files
+    - Colorado chosen (available in all datasets)
+    - Denver chosen (has comprehensive MetroCast data)
+
+3.2 Error Handling Test
+    Test Steps:
+    1. Open browser DevTools console
+    2. Manually set URL with invalid state: ?location=XX
+    3. Load page
+    4. Result should show "Select a State" prompt
+    5. Select valid state → data loads
+    6. Try city "invalid" in MetroCast
+    7. Result should show error or default view
+
+    Expected: No crashes, graceful error messages
+    Browsers: Chrome, Firefox, Safari
+
+3.3 State Persistence Test
+    Test Steps:
+    1. Load Flu Forecasts, select Colorado
+    2. Select 2-3 models and forecast dates
+    3. Note URL in address bar
+    4. Reload page (Ctrl+R)
+    5. Verify selections restored identically
+    6. Click browser back button
+    7. Verify navigates correctly
+
+    Expected: Full state restored, URL contains all params
+
+3.4 Attribution Visibility Test
+    Test Steps:
+    1. Open any forecast view
+    2. Locate attribution/source information
+    3. Verify text readable (not obscured)
+    4. Click attribution links
+    5. Verify links functional and authoritative
+    6. Open StateSelector menu
+    7. Verify attribution still visible (not hidden)
+
+    Expected: Attribution always accessible and correct
+
+E. TEST DATA SETS
+
+Test data repository: tests/data/
+
+1. Mock JSON Files
+   - mock-response-flu-CO.json: Colorado flu forecasts
+   - mock-response-covid-NY.json: New York COVID data
+   - mock-response-metrocast-CO.json: MetroCast Colorado
+   - mock-metadata-flu.json: FluSight metadata
+   - mock-metadata-metrocast.json: MetroCast with cities
+   - mock-empty.json: Empty forecasts (error case)
+   - mock-malformed.json: Invalid JSON (error case)
+
+2. Expected Values (Oracles)
+   - File: tests/data/EXPECTED_VALUES.txt
+   - Contains:
+     ✓ Valid state codes (2-letter)
+     ✓ Valid city abbreviations
+     ✓ Sample forecast values
+     ✓ URL parameter formats
+     ✓ Expected trace structures
+
+   Example Expected Value:
+   ```
+   Location: "CO"
+   File Path: /processed_data/flusight/colorado_flu.json
+   MetroCast File: /processed_data/flumetrocast/colorado_flu_metrocast.json
+   Has Cities: Yes (Denver, Boulder, etc.)
+   Available Targets: ["wk inc flu hosp", "wk flu hosp rate change"]
+   available Models: [model1, model2, ...] (10-30 models typical)
+   ```
+
+F. TEST EXECUTION & AUTOMATION
+
+Continuous Integration (GitHub Actions):
+
+```yaml
+name: Test Suite
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+      - run: npm install
+      - run: npm run lint
+      - run: npm run test:coverage
+      - run: npm run build
+```
+
+Manual Test Execution:
+
+Phase 1 (Week 1-2):
+```bash
+cd app
+npm install --save-dev vitest @testing-library/react @testing-library/jest-dom
+npm run test -- --coverage  # Should pass all unit tests
+npm run build               # Build should succeed
+```
+
+Phase 2 (Week 3-4):
+```bash
+npm run test:ui             # Interactive test runner
+npm run test -- --watch     # Watch mode during development
+```
+
+Manual E2E (Browser):
+```bash
+npm run dev                 # Start dev server on http://localhost:5173
+# Open browser and follow test scenarios above
+# Document results in TEST_RESULTS.txt
+```
+
+G. REGRESSION TEST CHECKLIST
+
+Run before each release (monthly or with major changes):
+
+- [ ] All unit tests pass (npm run test)
+- [ ] No console errors when loading home page
+- [ ] All 5 views load correctly
+- [ ] Select each view and verify data loads
+- [ ] Test researcher workflow (section 3.1)
+- [ ] Test error handling (section 3.2)
+- [ ] Test state persistence (section 3.3)
+- [ ] Check attribution display (section 3.4)
+- [ ] Build succeeds (npm run build)
+- [ ] Test on Chrome, Firefox, Safari (latest 2 versions)
+- [ ] Mobile view not broken (existing responsive design)
+- [ ] No new linting errors (npm run lint)
+
+H. BUG-SPECIFIC REGRESSION TESTS
+
+Verify fixes for bugs addressed in this commit:
+
+H.1 Bug #1: City Selection in MetroCast Carries Over
+    Test: tests/integration/CityAbbreviationMapping.test.jsx
+
+    Steps:
+    1. Navigate to MetroCast
+    2. Select "denver" (city)
+    3. Switch to FluView
+    4. Verify ViewContext has selectedLocation = "CO"
+    5. Verify FluView fetches /flusight/colorado_flu.json
+    6. Return to MetroCast
+    7. Verify selectedLocation = "denver"
+    8. Verify MetroCastView renders Denver data
+
+    Expected: No errors, correct mapping applied
+    File: viewContext.jsx lines 262-288 (syncLocation effect)
+
+H.2 Bug #2: Error Message Disappears on View Switch
+    Test: tests/integration/ViewSwitchErrorRecovery.test.jsx
+
+    Steps:
+    1. Navigate to COVID-19 forecasts
+    2. Select New York (supported)
+    3. Navigate to MetroCast (NY not supported)
+    4. Verify error message shows or default displayed
+    5. Navigate to RSV forecasts
+    6. Navigate back to MetroCast
+    7. Verify state reset to default, no persistent error
+
+    Expected: Clean error handling, no error state persists
+    File: viewContext.jsx lines 187-207 (handleViewChange)
+
+H.3 Bug #3: Colorado Highlighted by Default
+    Test: tests/integration/StateSelector.NoDefaultHighlight.test.jsx
+
+    Steps:
+    1. Open MetroCast forecast view
+    2. StateSelector opens (no user selection)
+    3. Verify NO state has light-blue "light" variant
+    4. Verify highlightedIndex = -1 initially
+    5. Press Arrow Down
+    6. Verify first state highlights/selected
+    7. Search for state (e.g., "Georgia")
+    8. Press Arrow Up without highlighting list
+    9. Verify wraps to Colorado last item, but not pre-highlighted
+
+    Expected: No default highlighting, clean slate
+    File: stateSelector.jsx lines 111, 134, 145, 166
+
+I. KNOWN LIMITATIONS & DEFERRED TESTING
+
+NOT tested in Phase 1 (future enhancement):
+- Tournament/game features (ForecastleGame)
+- Narrative viewer components
+- NHSN view specifics (uses different data source)
+- My RespiLens dashboard (requires auth, if implemented)
+- Multi-language support (if added)
+- Analytics/tracking verification
+- PDF export functionality
+- Database operations (if backend created)
+
+These can be added in Phase 2+ as features stabilize.
+
+================================================================================
+APPENDIX: TEST ENVIRONMENT SPECIFICATIONS
+================================================================================
+
+A. Development Environment
+   - OS: Windows 11 Home (Windows), macOS 13+ (Mac), Ubuntu 22.04 (Linux)
+   - Node.js: 18.17.0+ (latest LTS)
+   - npm: 9.0.0+
+   - Browser: Chrome 125+, Firefox 130+, Safari 17+, Edge 125+
+
+B. Continuous Integration
+   - Platform: GitHub Actions
+   - OS: Ubuntu-latest
+   - Node.js: 18.x
+   - Timeout: 10 minutes
+   - Cache: npm dependencies
+
+C. Test Tools
+   - Test Runner: Vitest 1.0+ (Vite-native, fast)
+   - Component Testing: React Testing Library 14.0+
+   - User Interaction: @testing-library/user-event 14.0+
+   - UI Viewer: @vitest/ui
+   - Coverage: vitest --coverage (via c8)
+   - Mocking: vitest built-in (vi.mock, vi.mocked)
+
+D. Performance Profiling
+   - Chrome DevTools Performance tab
+   - Lighthouse (Chrome built-in)
+   - Web Vitals (optional: @vitejs/plugin-basic-ssl)
+
+E. Data Files Location
+   - Test mocks: /app/tests/data/
+   - Live data: /app/public/processed_data/ (used in manual tests)
+   - Expected values: /app/tests/data/EXPECTED_VALUES.txt
+
+================================================================================
+APPENDIX: WHO TESTS WHAT & WHEN
+================================================================================
+
+Phase 1 (Weeks 1-2): Unit Tests
+- Developer: Harshil (test author)
+- When: During feature development, before commit
+- Tools: npm run test --watch
+- Exit Criteria: 75%+ coverage, all unit tests green
+
+Phase 2 (Weeks 3-4): Integration & Manual E2E
+- Developer: Harshil + (peer reviewer if available)
+- When: After unit tests pass, before PR merge
+- Tools: npm run test + manual browser testing
+- Duration: ~2 hours per test cycle
+- Exit Criteria: All E2E scenarios pass, no console errors
+
+Phase 3 (Ongoing): Regression & CI/CD
+- CI: Automated on every push (GitHub Actions)
+- Manual: Before release, monthly or with major changes
+- Tools: Full test suite + browser testing
+- Exit Criteria: 100% unit tests pass, no regressions
+
+Phase 4 (If "general audience" feature added): Accessibility
+- Tester: Accessibility specialist (external if possible)
+- When: Before general audience release
+- Tools: NVDA/JAWS screen readers, WCAG validation
+- Duration: 1-2 days
+- Exit Criteria: WCAG 2.1 AA compliance verified
+
+================================================================================
+END OF TEST PLAN
+================================================================================
+
+Document Version: 1.0
+Last Updated: 2026-04-15
+Next Review: After Phase 1 completion (2 weeks)
+
+For questions or updates, refer to:
+- Project README: /app/README.md
+- Architecture: /app/src/ (see file structure comments)
+- Data sources: /processed_data/ location and formats

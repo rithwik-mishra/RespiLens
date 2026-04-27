@@ -186,9 +186,12 @@ export const ViewProvider = ({ children }) => {
 
     if (isMovingToMetrocast) {
       // Check if current location is supported by metrocast
-      const isCurrentLocationSupportedByMetrocast = METROCAST_STATE_CODES.has(selectedLocation);
+      const isStateCode = METROCAST_STATE_CODES.has(selectedLocation);
+      const mightBeCityAbbr = selectedLocation && selectedLocation.length > 2;
 
-      if (!isCurrentLocationSupportedByMetrocast) {
+      // Allow state codes and potential city abbreviations (>2 chars)
+      // Only reset if it's neither a state code nor a city abbreviation
+      if (!isStateCode && !mightBeCityAbbr) {
         // Current location is not supported by metrocast, reset to metrocast default
         if (newDataset?.defaultLocation) {
           setSelectedLocation(newDataset.defaultLocation);
@@ -261,23 +264,20 @@ export const ViewProvider = ({ children }) => {
 
     const syncLocation = async () => {
       if (viewType !== 'metrocast_forecasts') {
-        // Check if it's a state code
-        if (METROCAST_STATE_CODES.has(urlLocation)) {
-          const effectiveDefault = dataset?.defaultLocation || APP_CONFIG.defaultLocation;
-          if (selectedLocation !== effectiveDefault) {
-            setSelectedLocation(effectiveDefault);
-          }
-        } else if (urlLocation.length > 2) {
+        // On non-metrocast views: handle city abbreviations but keep state codes
+        if (urlLocation.length > 2) {
           // Might be a city abbreviation - try to extract state code
           try {
             const metroMetadata = await fetch('/processed_data/flumetrocast/metadata.json').then(r => r.json());
             const city = metroMetadata.locations?.find(l => l.abbreviation === urlLocation);
             if (city && city.location_name?.includes(',')) {
+              // It's a city - extract state code
               const stateCode = city.location_name.split(',')[1].trim().toUpperCase();
               if (selectedLocation !== stateCode) {
                 setSelectedLocation(stateCode);
               }
             } else if (selectedLocation !== urlLocation) {
+              // Not recognized as city, sync directly
               setSelectedLocation(urlLocation);
             }
           } catch (e) {
@@ -287,10 +287,11 @@ export const ViewProvider = ({ children }) => {
             }
           }
         } else if (selectedLocation !== urlLocation) {
+          // 2-letter code or shorter - sync directly (state codes are valid here)
           setSelectedLocation(urlLocation);
         }
       } else if (selectedLocation !== urlLocation) {
-        // For metrocast view, sync from URL directly
+        // For metrocast view, sync from URL directly (allow both states and cities)
         setSelectedLocation(urlLocation);
       }
     };
