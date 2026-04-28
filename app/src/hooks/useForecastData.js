@@ -10,11 +10,11 @@ const METROCAST_CODE_TO_NAME = {
   'MD': 'maryland',
   'MA': 'massachusetts',
   'MN': 'minnesota',
-  'SC': 'south carolina',
+  'SC': 'south-carolina',
   'TX': 'texas',
   'UT': 'utah',
   'VA': 'virginia',
-  'NC': 'north carolina',
+  'NC': 'north-carolina',
   'OR': 'oregon'
 };
 
