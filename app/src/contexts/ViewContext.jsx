@@ -8,6 +8,11 @@ import { APP_CONFIG } from '../config';
 // Metrocast state codes
 const METROCAST_STATE_CODES = new Set(['CO', 'GA', 'IN', 'ME', 'MD', 'MA', 'MN', 'SC', 'TX', 'UT', 'VA', 'NC', 'OR']);
 
+// Map city abbreviations to state codes for cities without state info in metadata
+const CITY_TO_STATE_MAP = {
+  'nyc': 'NY'
+};
+
 export const ViewProvider = ({ children }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -209,8 +214,15 @@ export const ViewProvider = ({ children }) => {
         }
       }
     } else {
-      // When leaving metrocast: don't delete from URL, just let state sync handle it
-      // This way when user returns to metrocast, the location is still in URL
+      // When leaving metrocast: if we have a city abbreviation, immediately convert it to state
+      // to avoid timing issues with async sync effect
+      if (selectedLocation && selectedLocation.length > 2) {
+        const stateFromMapping = CITY_TO_STATE_MAP[selectedLocation];
+        if (stateFromMapping) {
+          setSelectedLocation(stateFromMapping);
+          newSearchParams.set('location', stateFromMapping);
+        }
+      }
     }
 
     if (newView !== APP_CONFIG.defaultView || newSearchParams.toString().length > 0) {
@@ -266,24 +278,32 @@ export const ViewProvider = ({ children }) => {
       if (viewType !== 'metrocast_forecasts') {
         // On non-metrocast views: handle city abbreviations but keep state codes
         if (urlLocation.length > 2) {
-          // Might be a city abbreviation - try to extract state code
-          try {
-            const metroMetadata = await fetch('/processed_data/flumetrocast/metadata.json').then(r => r.json());
-            const city = metroMetadata.locations?.find(l => l.abbreviation === urlLocation);
-            if (city && city.location_name?.includes(',')) {
-              // It's a city - extract state code
-              const stateCode = city.location_name.split(',')[1].trim().toUpperCase();
-              if (selectedLocation !== stateCode) {
-                setSelectedLocation(stateCode);
-              }
-            } else if (selectedLocation !== urlLocation) {
-              // Not recognized as city, sync directly
-              setSelectedLocation(urlLocation);
+          // Check static mapping first (for cities like NYC without state in metadata)
+          if (CITY_TO_STATE_MAP[urlLocation]) {
+            const stateCode = CITY_TO_STATE_MAP[urlLocation];
+            if (selectedLocation !== stateCode) {
+              setSelectedLocation(stateCode);
             }
-          } catch (e) {
-            console.warn('Could not fetch metrocast metadata:', e);
-            if (selectedLocation !== urlLocation) {
-              setSelectedLocation(urlLocation);
+          } else {
+            // Try to fetch metrocast metadata to extract state code
+            try {
+              const metroMetadata = await fetch('/processed_data/flumetrocast/metadata.json').then(r => r.json());
+              const city = metroMetadata.locations?.find(l => l.abbreviation === urlLocation);
+              if (city && city.location_name?.includes(',')) {
+                // It's a city with state in location_name - extract state code
+                const stateCode = city.location_name.split(',')[1].trim().toUpperCase();
+                if (selectedLocation !== stateCode) {
+                  setSelectedLocation(stateCode);
+                }
+              } else if (selectedLocation !== urlLocation) {
+                // Not recognized as city, sync directly
+                setSelectedLocation(urlLocation);
+              }
+            } catch (e) {
+              console.warn('Could not fetch metrocast metadata:', e);
+              if (selectedLocation !== urlLocation) {
+                setSelectedLocation(urlLocation);
+              }
             }
           }
         } else if (selectedLocation !== urlLocation) {
