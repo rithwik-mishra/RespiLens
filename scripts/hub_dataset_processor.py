@@ -177,6 +177,7 @@ class HubDataProcessorBase:
         date_col = self.config.ground_truth_date_column
         
         filtered["as_of"] = pd.to_datetime(filtered["as_of"])
+        # print("Ground truth columns:", filtered.columns.tolist())  # debug
         filtered[date_col] = pd.to_datetime(filtered[date_col])
         filtered.sort_values("as_of", inplace=True)
         filtered.dropna(subset=[self.config.observation_column], inplace=True)
